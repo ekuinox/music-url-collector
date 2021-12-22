@@ -1,0 +1,22 @@
+{
+  "name": "music-url-collector",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/ekuinox/music-url-collector.git"
+  },
+  "author": "ekuinox <depkey@me.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ekuinox/music-url-collector/issues"
+  },
+  "homepage": "https://github.com/ekuinox/music-url-collector#readme",
+  "devDependencies": {
+    "@vercel/node": "^1.12.1"
+  }
+}
