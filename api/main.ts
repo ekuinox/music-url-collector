@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import fetch from 'node-fetch';
+import createFetch from '@vercel/fetch';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+const fetch = createFetch();
 
 const requestSchema = z.object({
   content: z.string(),
