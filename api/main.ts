@@ -41,7 +41,7 @@ export const findUrls = (
 
 const resolveShortUrl = async (url: string): Promise<string | null> => {
   try {
-    const response = await fetch(url)
+    const response = await fetch(url, { redirect: 'follow' });
     return response.url;
   } catch (e: unknown) {
     return null;
@@ -82,7 +82,7 @@ const getTracks = async (content: string): Promise<Array<Track>> => {
   const urls = await Promise.all(
     findUrls(content)
       .map(resolveShortUrl)
-  );
+    );
   const tracks = await Promise.all(urls.filter(isNotNull).map(getTrack));
   return tracks.filter(isNotNull);
 };
@@ -121,14 +121,15 @@ const handler = (
   const { method, body } = request;
   if (
     method == null ||
-    method.toLowerCase() !== 'post' ||
-    typeof body !== 'string'
+    method.toLowerCase() !== 'post'
   ) {
     response.status(400).send('Bad Request');
     return;
   }
 
-  const parsed = requestSchema.safeParse(safeParseJson(body));
+  const parsed = requestSchema.safeParse(
+    body === 'string' && safeParseJson(body) || body
+  );
   if (!parsed.success) {
     response.status(400).send('Bad Request');
     return;
