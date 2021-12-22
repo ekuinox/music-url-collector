@@ -5,9 +5,12 @@ const fetch = createFetch();
 
 const requestSchema = z.object({
   content: z.string(),
-  targetUrls: z.record(
-    z.literal('Spotify'),
-    z.string()
+  services: z.record(
+    z.literal('spotify'),
+    z.object({
+      targetUrl: z.string(),
+      playlistName: z.string(),
+    }),
   ),
 });
 
@@ -48,13 +51,19 @@ const resolveShortUrl = async (url: string): Promise<string | null> => {
   }
 };
 
+interface IftttTriggerActionBody {
+  readonly value1?: string;
+  readonly value2?: string;
+  readonly value3?: string;
+}
+
 interface SpotifyTrack {
   trackId: string;
 }
 
 type ExtendServiceName<S extends string, T> = T & { service: S };
 
-type Track = ExtendServiceName<'Spotify', SpotifyTrack>;
+type Track = ExtendServiceName<'spotify', SpotifyTrack>;
 
 const getSpotifyTrack = (url: string): SpotifyTrack | null => {
   const matched = url.match(/open.spotify.com\/track\/(.+)\?/);
@@ -71,7 +80,7 @@ const getTrack = async (url: string): Promise<Track | null> => {
   const spotifyMatched = getSpotifyTrack(url);
   if (spotifyMatched != null) {
     return {
-      service: 'Spotify',
+      service: 'spotify',
       ...spotifyMatched,
     };
   }
@@ -87,27 +96,37 @@ const getTracks = async (content: string): Promise<Array<Track>> => {
   return tracks.filter(isNotNull);
 };
 
+const trackAsIftttRequest = (
+  serices: z.TypeOf<typeof requestSchema>['services'],
+  track: Track
+): IftttTriggerActionBody & { url: string } => {
+  switch (track.service) {
+    case 'spotify':
+      return {
+        value1: serices['spotify'].playlistName,
+        value2: track.trackId,
+        url: serices['spotify'].targetUrl,
+      };
+  }
+};
+
 const main = async (
-  { content, targetUrls }: z.TypeOf<typeof requestSchema>
+  { content, services }: z.TypeOf<typeof requestSchema>
 ): Promise<[number, string]> => {
   try {
     const tracks = await getTracks(content);
-    for (const { service, ...track } of tracks) {
-      switch (service) {
-        case 'Spotify':
-          const spotify = targetUrls['Spotify'];
-          fetch(spotify, {
-            method: 'POST',
-            body: JSON.stringify({
-              trackId: track.trackId,
-            })
-          });
-          break;
-        default:
-          break;
-      }
+    for (const { url, ...request } of tracks.map(trackAsIftttRequest.bind(null, services))) {
+      const body = JSON.stringify(request);
+      const r = await fetch(url, {
+        method: 'POST',
+        body,
+        headers: {
+          'content-type': 'application/json',
+        },
+      });
+      const text = await r.text();
     }
-    const response = JSON.stringify({ targetUrls, tracks });
+    const response = JSON.stringify({ services, tracks });
     return [200, response];
   } catch (e: unknown) {
     return [500, 'Internal Error'];
